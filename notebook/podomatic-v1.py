@@ -250,6 +250,9 @@ def loudness_stats_old(samples):
 #     return loudness_dB
    
 
+import sys
+
+# assert len(sys.argv) == 6, "## args: input video 1, input video 2, output video, output_audio_processed, output_audio_clean"
 
 print("Loading video files for analysis")
 
@@ -257,11 +260,13 @@ print("Loading video files for analysis")
 sr = 48000
 window_size = round(0.5 * sr)  
 hits_to_switch = sr # how many 'loudest frame' hits needed to switch to that track? 
-video_in_file_1 = "../data/matthew-aligned.mov"
-video_in_file_2 = "../data/mark-aligned.mov"
-video_out_file = "render.mp4"
-proc_audio_file = "proc_audio.wav"
-clean_audio_file = "clean_audio.wav"
+# video_in_file_1 = "../data/matthew-aligned.mov"
+# video_in_file_2 = "../data/mark-aligned.mov"
+video_in_file_1 = "../data/openbook1-aligned.mov"
+video_in_file_2 = "../data/openbook2-aligned.mov"
+video_out_file = "openbook-render.mp4"
+proc_audio_file = "openbook-proc_audio.wav"
+clean_audio_file = "openbook-clean_audio.wav"
 
 
 video_paths = [video_in_file_1, video_in_file_2]
