@@ -1,5 +1,6 @@
 # podomatic
-Automatically edit a podcast-style video with two camera feeds based on who is talking, Python 
+Automatically edit a podcast-style video with two camera feeds based on who is talking. 
+
 Takes two video files, analyses the audio and automatically generates an edited video which switches to the camera with the sound. It also mixes the two audio tracks and applies a naive gating and limiting process. The mixed audio is also written out in clean and processed form. 
 
 ```
