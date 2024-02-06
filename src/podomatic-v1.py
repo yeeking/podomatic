@@ -11,6 +11,8 @@ from scipy.io import wavfile
 from moviepy.editor import AudioFileClip, AudioClip
 import os
 from pedalboard import Pedalboard, Chorus, Reverb, Limiter
+import platform
+
 
 def get_audio_sample_rate(video_file):
     probe = ffmpeg.probe(video_file, v='quiet', select_streams='a:0', show_entries='stream=sample_rate')
@@ -160,7 +162,7 @@ def buffer_to_audioclip(buffer, sr=48000):
         wavfile.write(temp_audio_filename, sr, buffer)
     # 
     audio_clip = AudioFileClip(temp_audio_filename) 
-    os.remove(temp_audio_filename)
+    # os.remove(temp_audio_filename)
     return audio_clip
 
 
@@ -252,21 +254,43 @@ def loudness_stats_old(samples):
 
 import sys
 
-# assert len(sys.argv) == 6, "## args: input video 1, input video 2, output video, output_audio_processed, output_audio_clean"
+assert len(sys.argv) == 6, "## args: input video 1, input video 2, output video, output_audio_processed, output_audio_clean"
 
-print("Loading video files for analysis")
+print("Checking config")
 
 ### some params to read from the CLI probably
 sr = 48000
 window_size = round(0.5 * sr)  
 hits_to_switch = sr # how many 'loudest frame' hits needed to switch to that track? 
-# video_in_file_1 = "../data/matthew-aligned.mov"
-# video_in_file_2 = "../data/mark-aligned.mov"
-video_in_file_1 = "../data/openbook1-aligned.mov"
-video_in_file_2 = "../data/openbook2-aligned.mov"
-video_out_file = "openbook-render.mp4"
-proc_audio_file = "openbook-proc_audio.wav"
-clean_audio_file = "openbook-clean_audio.wav"
+
+video_in_file_1 = sys.argv[1] # 
+video_in_file_2 = sys.argv[2]
+video_out_file = sys.argv[3]
+proc_audio_file = sys.argv[4]
+clean_audio_file = sys.argv[5]
+
+# work out the format 
+video_ext = video_out_file[-3:]
+video_codec = None
+audio_codec = None
+
+is_apple_os = platform.system() == 'Darwin'
+
+if video_ext == "mov":
+    video_codec = "prores" # no videotoolbox for prores yet, not sure why 
+    audio_codec = "pcm_s24le"
+elif video_ext == "mp4":
+    if is_apple_os:
+        video_codec = "h264_videotoolbox" # fast one for mac
+    else:
+        video_codec = "h264" # fast one for mac
+    audio_codec = "aac"
+
+assert video_codec is not None, "Video format not supported" + video_ext
+
+print("V1:", video_in_file_1, "V2:", video_in_file_2, "V_out:", video_out_file, "v/a", video_codec, audio_codec, "Audio clean:",clean_audio_file, "Audio processed:", proc_audio_file)
+
+assert False, "done"
 
 
 video_paths = [video_in_file_1, video_in_file_2]
@@ -345,7 +369,7 @@ audio_as_clip_clean.write_audiofile(clean_audio_file)
 
 
 print("writing video file")
-clip.write_videofile(video_out_file)
+clip.write_videofile(video_out_file, codec=video_codec, audio_codec=audio_codec)
 
 print("Remuxing audio to video file")
 
