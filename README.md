@@ -1,6 +1,5 @@
 # podomatic
-Automatic podcast editing system written in Python
-
+Automatically edit a podcast-style video with two camera feeds based on who is talking, Python 
 Takes two video files, analyses the audio and automatically generates an edited video which switches to the camera with the sound. It also mixes the two audio tracks and applies a naive gating and limiting process. The mixed audio is also written out in clean and processed form. 
 
 ```
@@ -19,6 +18,8 @@ Now prepare your two input video files so they are reasonably in-sync, then run 
 # the file extension on outfile dictates the codecs: mp4 -> h264/aac or mov -> prores/s24le
 python src/podomatic-v1.py infile1.mov infile2.mov outfile.mov processed-audio-out.wav clean-audio-out.wav
 ```
+
+Created by Matthew Yee-King, 2024
  
 
 
