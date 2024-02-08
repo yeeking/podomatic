@@ -53,7 +53,7 @@ def find_highest_elements(arr1, arr2):
     for each step in the new array, if arr1[step] > arr2[step], write 0, otherwise, 1
     """
     if len(arr1) != len(arr2):
-        raise ValueError("Input arrays must have the same length")
+        raise ValueError("Amp readings from video files seem to have different lengths. Try re-exporting the video with same length. ")
     result = [0 if l1 > l2 else 1 for l1, l2 in zip(arr1, arr2)]
     return np.array(result)
 
@@ -292,7 +292,6 @@ print("V1:", video_in_file_1, "V2:", video_in_file_2, "V_out:", video_out_file, 
 
 #assert False, "done"
 
-
 video_paths = [video_in_file_1, video_in_file_2]
 assert os.path.exists(video_paths[0]), video_paths[0] + " not found "
 assert os.path.exists(video_paths[1]), video_paths[1] + " not found "
@@ -374,3 +373,6 @@ clip.write_videofile(video_out_file, codec=video_codec, audio_codec=audio_codec)
 print("Remuxing audio to video file")
 
 remux_video(video_out_file, proc_audio_file)
+
+if video_ext == "mp4":
+    print("Warning - cannot remux wav to mp4 - leaving bad audio on video remux your proc file in your video editor")
