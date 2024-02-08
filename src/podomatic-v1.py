@@ -290,7 +290,7 @@ assert video_codec is not None, "Video format not supported" + video_ext
 
 print("V1:", video_in_file_1, "V2:", video_in_file_2, "V_out:", video_out_file, "v/a", video_codec, audio_codec, "Audio clean:",clean_audio_file, "Audio processed:", proc_audio_file)
 
-assert False, "done"
+#assert False, "done"
 
 
 video_paths = [video_in_file_1, video_in_file_2]
