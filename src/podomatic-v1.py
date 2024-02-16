@@ -1,3 +1,5 @@
+import sys
+
 import tempfile
 import numpy as np
 import librosa
@@ -13,6 +15,35 @@ import os
 from pedalboard import Pedalboard, Chorus, Reverb, Limiter
 import platform
 
+
+from moviepy.editor import VideoFileClip, concatenate_videoclips, ColorClip
+
+def add_offset_to_clip(clip:VideoFileClip, offset_ms):
+    """
+    add blank video for offset_ms to the beginning of the clip
+    and return it 
+    """
+    print("adding offset of", offset_ms, "to clip")
+    # Define the clip's properties
+    duration = offset_ms / 1000  # Duration in seconds
+    size = clip.size #(1920, 1080)  # Size in pixels (width, height)
+    color = (0, 0, 0)  # Black color
+    # Create the blank clip
+    blank_clip = ColorClip(size=size, color=color, duration=duration)
+    return concatenate_videoclips([blank_clip, clip])
+
+def sync_video_clips(clip1:VideoFileClip, clip2:VideoFileClip, clip1_clap_ms:int, clip2_clap_ms:int):
+    """
+    Returns two new VideoFileClip objects where the sent clap positions occur at the same
+    offset from the start
+    """
+
+    if clip1_clap_ms > clip2_clap_ms:
+        # keep clip1 where it is and move clip 2
+        clip2 = add_offset_to_clip(clip2, clip1_clap_ms - clip2_clap_ms)
+    else:
+        clip1 = add_offset_to_clip(clip1, clip2_clap_ms - clip1_clap_ms)
+    return clip1, clip2
 
 def get_audio_sample_rate(video_file):
     probe = ffmpeg.probe(video_file, v='quiet', select_streams='a:0', show_entries='stream=sample_rate')
@@ -33,6 +64,7 @@ def extract_audio_data(video_file):
     extracts the audio track from the video file and returns it as an
     array of samples. If 2 channels, returns average values for simplicity 
     """
+    assert os.path.exists(video_file), "extract_audio_data - video file does not exist " + video_file
     sr = get_audio_sample_rate(video_file)
     channels = count_audio_channels(video_file)
     audio, _ = (
@@ -81,7 +113,34 @@ def process_repeats(input, thresh = 100):
     return output
 
 
+from moviepy.editor import VideoFileClip, concatenate_videoclips, ColorClip
 
+def add_offset_to_clip(clip:VideoFileClip, offset_ms):
+    """
+    add blank video for offset_ms to the beginning of the clip
+    and return it 
+    """
+    print("adding offset of", offset_ms, "to clip")
+    # Define the clip's properties
+    duration = offset_ms / 1000  # Duration in seconds
+    size = clip.size #(1920, 1080)  # Size in pixels (width, height)
+    color = (0, 0, 0)  # Black color
+    # Create the blank clip
+    blank_clip = ColorClip(size=size, color=color, duration=duration)
+    return concatenate_videoclips([blank_clip, clip])
+
+def sync_video_clips(clip1:VideoFileClip, clip2:VideoFileClip, clip1_clap_ms:int, clip2_clap_ms:int):
+    """
+    Returns two new VideoFileClip objects where the sent clap positions occur at the same
+    offset from the start
+    """
+
+    if clip1_clap_ms > clip2_clap_ms:
+        # keep clip1 where it is and move clip 2
+        clip2 = add_offset_to_clip(clip2, clip1_clap_ms - clip2_clap_ms)
+    else:
+        clip1 = add_offset_to_clip(clip1, clip2_clap_ms - clip1_clap_ms)
+    return clip1, clip2
 
 def test_find_highest_elements():
     # Example usage:
@@ -112,11 +171,40 @@ def count_repeats(arr):
             val = x
             count = 0
     return lens
+
+def video_edit_list_to_audio_edits(edit_list, fade_out_time):
+    """
+    converts the sent edit list into a mix plan 
+    edit_list = [[channel_ind, length], ]
+    obtained from count_repeats
+    returns format ... 
+
+    for the audio, which defines the level for both 
+    channels at each point of the edit
+    switching to a different channel 
+    sometimes happens before the audio starts on that channel
+    so when switching to a different channel, 
+    fade up the audio pre-emptively 
+    and retain the previous channel for a bit as well
+    then fade it out 
+    """   
+    assert len(edit_list) > 0
+    assert len(edit_list[0]) == 2
+
+def apply_audio_edits(audios, edit_list):
+    """
+    edit_list is ...
+    obtained from video_edit_list_to_audio_edits
+    """
+    pass
     
-def create_video_edit_moviepy(video_paths, segment_descriptors):
+
+
+# def create_video_edit_moviepy(video_paths, segment_descriptors):
+def create_video_edit_moviepy(videos, segment_descriptors):
     clips = []
     offset = 0  # Initialize the offset
-    videos = [VideoFileClip(p) for p in video_paths]
+    # videos = [VideoFileClip(p) for p in video_paths]
     #for video_index, duration in segment_descriptors:
     for seg_pair in segment_descriptors:
         video_index = int(seg_pair[0])
@@ -218,43 +306,29 @@ def loudness_stats(samples, block_size=512):
     return {"rms_mean":mean_loudness, "rms_std":std_deviation_loudness}
 
 
-def loudness_stats_old(samples):
-    samples = np.array(samples)
-    # print("analysing samples: ", len(samples))
-    # stop zeros...
-    offset = 1e-6
-    samples = samples + offset
-    # Step 1: Calculate the loudness (in dB) for each sample
-    loudness_dB = 20 * np.log10(np.abs(samples))
+# def loudness_stats_old(samples):
+#     samples = np.array(samples)
+#     # print("analysing samples: ", len(samples))
+#     # stop zeros...
+#     offset = 1e-6
+#     samples = samples + offset
+#     # Step 1: Calculate the loudness (in dB) for each sample
+#     loudness_dB = 20 * np.log10(np.abs(samples))
     
-    # Step 2: Compute the mean (average) of the loudness values
-    mean_loudness = np.mean(loudness_dB)
+#     # Step 2: Compute the mean (average) of the loudness values
+#     mean_loudness = np.mean(loudness_dB)
     
-    # Step 3: Calculate the standard deviation of the loudness values
-    std_deviation_loudness = np.std(loudness_dB)
+#     # Step 3: Calculate the standard deviation of the loudness values
+#     std_deviation_loudness = np.std(loudness_dB)
     
-    print(f"Mean loudness in dB: {mean_loudness:.2f} dB")
-    print(f"Standard deviation of loudness in dB: {std_deviation_loudness:.2f} dB")
-    return {"rms_mean":mean_loudness, "rms_std":std_deviation_loudness}
+#     print(f"Mean loudness in dB: {mean_loudness:.2f} dB")
+#     print(f"Standard deviation of loudness in dB: {std_deviation_loudness:.2f} dB")
+#     return {"rms_mean":mean_loudness, "rms_std":std_deviation_loudness}
 
 
-# def loudness_stats(buffer):
-#     # Step 1: Calculate the root mean square (RMS)
-#     rms = np.sqrt(np.mean(buffer ** 2))
-#     rmsd = np.sqrt(np.std(buffer ** 2))
-    
-#     # Step 2: Convert RMS to dB
-#     loudness_dB = 20 * np.log10(rms)
-#     loudness_dB_std = 20 * np.log10(rmsd)
-    
-#     print(f"Median loudness in dB: {loudness_dB:.2f} dB")
-#     print(f"SD: {loudness_dB_std:.2f} dB")
-#     return loudness_dB
-   
 
-import sys
-
-assert len(sys.argv) == 6, "## args: input video 1, input video 2, output video, output_audio_processed, output_audio_clean"
+# assert len(sys.argv) == 6, "## args: input video 1, input video 2, output video, output_audio_processed, output_audio_clean"
+assert len(sys.argv) == 8, "## args: input video 1, input video 2, output video, output_audio_processed, output_audio_clean, input 1 snap pos in ms, input 2 snap pos in ms"
 
 print("Checking config")
 
@@ -268,6 +342,8 @@ video_in_file_2 = sys.argv[2]
 video_out_file = sys.argv[3]
 proc_audio_file = sys.argv[4]
 clean_audio_file = sys.argv[5]
+video1_snap = sys.argv[6]
+video2_snap = sys.argv[7]
 
 # work out the format 
 video_ext = video_out_file[-3:]
@@ -278,7 +354,7 @@ is_apple_os = platform.system() == 'Darwin'
 
 if video_ext == "mov":
     video_codec = "prores" # no videotoolbox for prores yet, not sure why 
-    audio_codec = "pcm_s24le"
+    audio_codec = " "
 elif video_ext == "mp4":
     if is_apple_os:
         video_codec = "h264_videotoolbox" # fast one for mac
@@ -328,51 +404,62 @@ print("Analysis complete. Carrying out edits ")
 
 # convert to fractions of a second
 item_reps_secs = [[v[0], v[1]/sr] for v in item_reps_all]
-clip = create_video_edit_moviepy(video_paths, item_reps_secs)
 
-####################### NORMALISE, LIMIT AND GATE THE SOUND 
+# load and sync the clips 
+print("Loading files and preparing for edit")
+video_clip1 = VideoFileClip(video_paths[0])
+video_clip2 = VideoFileClip(video_paths[1])
+print("syncing files")
+video_clip1, video_clip2 = sync_video_clips(video_clip1, video_clip2, video1_snap, video2_snap)
+print("doing edit")
+clip = create_video_edit_moviepy([video_clip1, video_clip2], item_reps_secs)
+
+####################### NORMALISE, LIMIT AND GA TE THE SOUND 
 #######################
 
-# noramlise
-print("normalise")
-clip1_proc = normalise(clip1)
-clip2_proc = normalise(clip2)
-print("limiter")
-clip1_proc = apply_limit(clip1)
-clip2_proc = apply_limit(clip2)
+audio_clip = clip.audio
+audio_data = get_audio_sample_rate
 
-print("Compute loudness stats for gate")
-stats1 = loudness_stats(clip1_proc)
-stats2 = loudness_stats(clip2_proc)
+# # noramlise
+# print("normalise")
+# clip1_proc = normalise(clip1)
+# clip2_proc = normalise(clip2)
+# print("limiter")
+# clip1_proc = apply_limit(clip1)
+# clip2_proc = apply_limit(clip2)
 
-print("gate")
-clip1_proc = apply_gate(clip1_proc, gate_threshold_db=stats1["rms_mean"])
-clip2_proc = apply_gate(clip2_proc, gate_threshold_db=stats2["rms_mean"])
+# print("Compute loudness stats for gate")
+# stats1 = loudness_stats(clip1_proc)
+# stats2 = loudness_stats(clip2_proc)
+
+# print("gate")
+# clip1_proc = apply_gate(clip1_proc, gate_threshold_db=stats1["rms_mean"])
+# clip2_proc = apply_gate(clip2_proc, gate_threshold_db=stats2["rms_mean"])
 
 
-# mix channels
-print("mixing")
-mixed_audio = (np.array(clip1_proc) + np.array(clip2_proc)) / 2
-mixed_audio = normalise(mixed_audio)
+# # mix channels
+# print("mixing")
+# mixed_audio = (np.array(clip1_proc) + np.array(clip2_proc)) / 2
+# mixed_audio = normalise(mixed_audio)
 
-print("mixing and clean audio")
-# make an unprocessed version of the audio (aside from normalising)
-mixed_audio_clean = (np.array(normalise(clip1)) + np.array(normalise(clip2))) / 2
-mixed_audio_clean = normalise(mixed_audio)
+# print("mixing and clean audio")
+# # make an unprocessed version of the audio (aside from normalising)
+# mixed_audio_clean = (np.array(normalise(clip1)) + np.array(normalise(clip2))) / 2
+# mixed_audio_clean = normalise(mixed_audio)
 
-print("writing audio files")
-audio_as_clip = buffer_to_audioclip(mixed_audio)
-audio_as_clip.write_audiofile(proc_audio_file)
-audio_as_clip_clean = buffer_to_audioclip(mixed_audio)
-audio_as_clip_clean.write_audiofile(clean_audio_file)
+# print("writing audio files")
+# audio_as_clip = buffer_to_audioclip(mixed_audio)
+# audio_as_clip.write_audiofile(proc_audio_file)
+# audio_as_clip_clean = buffer_to_audioclip(mixed_audio)
+# audio_as_clip_clean.write_audiofile(clean_audio_file)
 
 
 print("writing video file")
 clip.write_videofile(video_out_file, codec=video_codec, audio_codec=audio_codec)
 
-print("Remuxing audio to video file")
+# print("Remuxing audio to video file")
 
-remux_video(video_out_file, proc_audio_file)
+# remux_video(video_out_file, proc_audio_file)
 
-if video_ext == "mp4":
-    print("Warning - cannot remux wav to mp4 - leaving bad audio on video remux your proc file in your video editor")
+# if video_ext == "mp4":
+#     print("Warning - cannot remux wav to mp4 - leaving bad audio on video remux your proc file in your video editor")
