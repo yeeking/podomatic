@@ -84,8 +84,16 @@ def find_highest_elements(arr1, arr2):
     returns an array of the same length as arr1 and arr2
     for each step in the new array, if arr1[step] > arr2[step], write 0, otherwise, 1
     """
+    if len(arr1) > len(arr2):
+        diff = len(arr1) - len(arr2)
+        arr2 = np.concatenate((arr2, np.zeros(diff)))
+    elif len(arr2) > len(arr1):
+        diff = len(arr2) - len(arr1)
+        arr1 = np.concatenate((arr1, np.zeros(diff)))     
+    
     if len(arr1) != len(arr2):
         raise ValueError("Amp readings from video files seem to have different lengths. Try re-exporting the video with same length. ")
+    
     result = [0 if l1 > l2 else 1 for l1, l2 in zip(arr1, arr2)]
     return np.array(result)
 
@@ -342,8 +350,8 @@ video_in_file_2 = sys.argv[2]
 video_out_file = sys.argv[3]
 proc_audio_file = sys.argv[4]
 clean_audio_file = sys.argv[5]
-video1_snap = sys.argv[6]
-video2_snap = sys.argv[7]
+video1_snap = int(sys.argv[6])
+video2_snap = int(sys.argv[7])
 
 # work out the format 
 video_ext = video_out_file[-3:]
